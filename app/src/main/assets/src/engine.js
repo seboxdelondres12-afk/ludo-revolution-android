@@ -752,3 +752,260 @@ export function movePawn(state, pawnId, direction = null, diceSum = null) {
         steps.push({ progress: p, inHome: false, intruderLane: null });
       }
     }
+    for (let d = 1; d <= chosenMove.depth; d++) {
+      steps.push({
+        progress: chosenMove.resumeProgress,
+        inHome: false,
+        intruderLane: {
+          ownerColor: chosenMove.ownerColor,
+          depth: d,
+          resumeProgress: chosenMove.resumeProgress,
+        },
+      });
+    }
+  } else if (chosenMove.direction === 'exit_raid') {
+    steps.push({ progress: toProgress, inHome: false, intruderLane: null });
+  } else if (chosenMove.direction === 'forward' || chosenMove.direction === 'forward_combo') {
+    for (let p = fromProgress + 1; p <= toProgress; p++) {
+      steps.push({ progress: p, inHome: false, intruderLane: null });
+    }
+  } else {
+    for (let p = fromProgress - 1; p >= toProgress; p--) {
+      steps.push({ progress: p, inHome: false, intruderLane: null });
+    }
+  }
+
+  pawn.inHome = false;
+  let capturedPawn = null;
+
+  if (chosenMove.direction === 'raid' || chosenMove.direction === 'raid_backward') {
+    pawn.intruderLane = {
+      ownerColor: chosenMove.ownerColor,
+      depth: chosenMove.depth,
+      resumeProgress: chosenMove.resumeProgress,
+    };
+    pawn.progress = chosenMove.resumeProgress;
+    const targets = getCapturableOpponentsInFinalLane(
+      state,
+      player.color,
+      chosenMove.ownerColor,
+      chosenMove.depth
+    );
+    if (targets.length > 0) {
+      for (const t of targets) {
+        t.inHome = true;
+        t.progress = 0;
+        t.intruderLane = null;
+        t.capturedBy = player.color;
+      }
+      capturedPawn = {
+        color: targets[0].color,
+        pawnId: targets[0].id,
+        count: targets.length,
+        capturedBy: player.color,
+      };
+    }
+  } else {
+    pawn.intruderLane = null;
+    if ((chosenMove.direction === 'backward' || chosenMove.direction === 'backward_combo') && toProgress <= -2) {
+      pawn.progress = b.trackLength + toProgress;
+    } else {
+      pawn.progress = toProgress;
+    }
+
+    if (pawn.progress <= b.outerMax) {
+      const landingIdx = getGlobalTrackIndex(player.color, pawn.progress, false, null, b);
+      const targets = getCapturableOpponentsAt(state, player.color, landingIdx);
+      if (targets.length > 0) {
+        for (const t of targets) {
+          t.inHome = true;
+          t.progress = 0;
+          t.intruderLane = null;
+          t.capturedBy = player.color;
+        }
+        capturedPawn = {
+          color: targets[0].color,
+          pawnId: targets[0].id,
+          count: targets.length,
+          capturedBy: player.color,
+          trackIndex: landingIdx,
+        };
+      }
+    } else if (pawn.progress < b.finishProgress) {
+      const targets = getCapturableOpponentsInFinalLane(
+        state,
+        player.color,
+        player.color,
+        pawn.progress - b.outerMax
+      );
+      if (targets.length > 0) {
+        for (const t of targets) {
+          t.inHome = true;
+          t.progress = 0;
+          t.intruderLane = null;
+          t.capturedBy = player.color;
+        }
+        capturedPawn = {
+          color: targets[0].color,
+          pawnId: targets[0].id,
+          count: targets.length,
+          capturedBy: player.color,
+        };
+      }
+    }
+  }
+
+  const reachedFinish = !pawn.intruderLane && pawn.progress === b.finishProgress;
+  if (capturedPawn) {
+    const capCount = capturedPawn.count || 1;
+    player.score = (player.score || 0) + 2 * capCount;
+  }
+  if (reachedFinish) {
+    player.score = (player.score || 0) + 10;
+  }
+
+  if (!state.finishOrder) state.finishOrder = [];
+  const playerFinished = hasPlayerFinished(player, b);
+  let finishRank = null;
+  if (playerFinished) {
+    if (!state.finishOrder.includes(player.color)) {
+      state.finishOrder.push(player.color);
+    }
+    finishRank = state.finishOrder.indexOf(player.color) + 1;
+  }
+  const matchOver = isMatchOver(state);
+  if (reachedFinish || Boolean(capturedPawn)) {
+    state.bonusRollEarned = true;
+  }
+  if (capturedPawn) {
+    if (!state.capturedThisTurnPawnIds) state.capturedThisTurnPawnIds = [];
+    if (!state.capturedThisTurnPawnIds.includes(pawnId)) {
+      state.capturedThisTurnPawnIds.push(pawnId);
+    }
+  }
+  consumeDice();
+
+  let bonusTurn = false;
+  if (matchOver) {
+    state.phase = 'GAME_OVER';
+    state.diceValue = null;
+    state.diceValues = [];
+    state.bonusRollEarned = false;
+    state.legalMoves = [];
+    state.legalPawnIds = [];
+  } else if (playerFinished) {
+    advanceTurn(state);
+  } else if (state.diceValues.length > 0) {
+    const nextMoves = getLegalMoves(state);
+    if (nextMoves.length > 0) {
+      state.phase = 'WAIT_MOVE';
+      state.legalMoves = nextMoves;
+      state.legalPawnIds = [...new Set(nextMoves.map((m) => m.pawnId))];
+      bonusTurn = true;
+    } else if (state.bonusRollEarned) {
+      state.bonusRollEarned = false;
+      state.phase = 'WAIT_ROLL';
+      state.diceValue = null;
+      state.diceValues = [];
+      state.legalMoves = [];
+      state.legalPawnIds = [];
+      bonusTurn = true;
+    } else {
+      advanceTurn(state);
+    }
+  } else if (state.bonusRollEarned) {
+    state.bonusRollEarned = false;
+    state.phase = 'WAIT_ROLL';
+    state.diceValue = null;
+    state.diceValues = [];
+    state.legalMoves = [];
+    state.legalPawnIds = [];
+    bonusTurn = true;
+  } else {
+    advanceTurn(state);
+  }
+
+  return {
+    color: player.color,
+    pawnId,
+    direction: chosenMove.direction,
+    fromInHome,
+    fromIntruderLane,
+    fromProgress,
+    toProgress,
+    toIntruderLane: pawn.intruderLane,
+    steps,
+    capturedPawn,
+    reachedFinish,
+    bonusTurn,
+    playerFinished,
+    finishRank,
+    matchOver,
+  };
+}
+
+/**
+ * Awards end-of-match placement bonuses:
+ * - 1st place: +160 (so 4 finished pawns x 10 + 160 = 200 min + capture points)
+ * - 2nd place: +140 (-20)
+ * - 3rd place: +110 (-30)
+ * - Intermediate (4th/5th in 5-6p): +80 / +50
+ * - Last place: +0 (keeps only earned capture/finish points)
+ */
+export function finalizeMatchScores(state, winnerColor = null) {
+  const rankedInfo = getPlayerRanks(state, winnerColor);
+  const bonuses = [160, 140, 110, 80, 50];
+  return rankedInfo.map((info, idx) => {
+    const p = state.players.find((pl) => pl.color === info.color);
+    const isLast = idx === rankedInfo.length - 1;
+    const bonus = isLast ? 0 : (bonuses[idx] ?? 0);
+    p.score = (p.score || 0) + bonus;
+    return {
+      color: p.color,
+      rank: info.rank,
+      score: p.score,
+      bonus,
+      isAi: p.isAi,
+    };
+  });
+}
+
+const CODE_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+export function encodeMatchCode(state) {
+  if (typeof state?.matchCode === 'string' && /^[A-Z0-9]{6}$/.test(state.matchCode)) {
+    return state.matchCode;
+  }
+  const n = Math.max(2, Math.min(6, state.players.length));
+  let code = CODE_CHARS[n - 2]; // 0..4 => 2..6 human players
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const digits = '0123456789';
+  for (let i = 1; i < 6; i++) {
+    code += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+  }
+  // Ensure at least one digit and one letter for a clean mixed look like GZ6G4H
+  if (!/[0-9]/.test(code)) {
+    code = code.slice(0, 2) + digits[Math.floor(Math.random() * digits.length)] + code.slice(3);
+  }
+  if (!/[A-Z]/.test(code)) {
+    code = code.slice(0, 1) + letters[Math.floor(Math.random() * letters.length)] + code.slice(2);
+  }
+  state.matchCode = code;
+  return code;
+}
+
+export function decodeMatchCode(rawCode) {
+  try {
+    if (typeof rawCode !== 'string') return null;
+    const code = rawCode.trim().toUpperCase();
+    if (!/^[A-Z0-9]{6}$/.test(code)) return null;
+
+    const idx = CODE_CHARS.indexOf(code[0]);
+    const playerCount = idx >= 0 && idx < 5 ? 2 + idx : 2 + (idx % 5);
+    const state = createGameState({ playerCount, aiCount: 0 });
+    state.matchCode = code;
+    return state;
+  } catch {
+    return null;
+  }
+}
