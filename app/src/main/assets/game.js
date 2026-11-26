@@ -772,3 +772,460 @@ function run(mode = 'play') {
       } else if (inRect(pt, MENU_BUTTONS.leaderboard)) {
         audio.playUiClick();
         openLeaderboard();
+      } else if (inRect(pt, MENU_BUTTONS.audio)) {
+        toggleAudioMute();
+      } else if (inRect(pt, MENU_BUTTONS.joinCode)) {
+        audio.playUiClick();
+        openCodeModal('import');
+      }
+      return;
+    }
+
+    // --- SAVES SCREEN ---
+    if (screen === 'SAVES') {
+      if (inRect(pt, SAVES_BACK_BTN)) {
+        audio.playUiClick();
+        screen = 'MENU';
+        return;
+      }
+      const list = savedGames.slice(0, 7);
+      for (let i = 0; i < list.length; i++) {
+        if (inRect(pt, getSaveDeleteRect(i))) {
+          audio.playUiClick();
+          savedGames = deleteSavedGame(savedGames, list[i].id);
+          saveUserData({ savedGames, profile });
+          toastBanner = { text: 'PARTIE SUPPRIMÉE', elapsed: 0, duration: 1.4 };
+          return;
+        }
+        if (inRect(pt, getSaveRowRect(i))) {
+          audio.playUiClick();
+          openSavedEntry(list[i]);
+          return;
+        }
+      }
+      return;
+    }
+
+    // --- PROFILE SCREEN ---
+    if (screen === 'PROFILE') {
+      if (inRect(pt, PROFILE_BACK_BTN)) {
+        audio.playUiClick();
+        screen = 'MENU';
+      }
+      return;
+    }
+
+    // --- SETTINGS SCREEN ---
+    if (screen === 'SETTINGS') {
+      if (inRect(pt, SETTINGS_BUTTONS.music)) {
+        config.musicEnabled = !config.musicEnabled;
+        audio.updatePrefs({ musicEnabled: config.musicEnabled });
+        audio.playUiClick();
+      } else if (inRect(pt, SETTINGS_BUTTONS.sfx)) {
+        config.sfxEnabled = !config.sfxEnabled;
+        audio.updatePrefs({ sfxEnabled: config.sfxEnabled });
+        if (config.sfxEnabled) audio.playUiClick();
+      } else if (inRect(pt, SETTINGS_BUTTONS.haptics)) {
+        config.hapticsEnabled = !config.hapticsEnabled;
+        audio.updatePrefs({ hapticsEnabled: config.hapticsEnabled });
+        audio.playUiClick();
+      } else if (inRect(pt, SETTINGS_BUTTONS.speed)) {
+        const presets = [0.7, 1.0, 1.5, 2.0, 2.5];
+        const idx = presets.findIndex((v) => v > config.animationSpeed + 0.05);
+        config.animationSpeed = idx >= 0 ? presets[idx] : presets[0];
+        audio.updatePrefs({ pawnSpeed: config.animationSpeed });
+        audio.playUiClick();
+      } else if (inRect(pt, SETTINGS_BUTTONS.back)) {
+        audio.playUiClick();
+        screen = 'MENU';
+      }
+      return;
+    }
+
+    // --- SETUP SCREEN ---
+    if (screen === 'SETUP') {
+      for (const btn of SETUP_BUTTONS.players) {
+        if (inRect(pt, btn)) {
+          audio.playUiClick();
+          config.playerCount = btn.value;
+          config.aiCount = setupMode === 'ai' ? config.playerCount - 1 : 0;
+          return;
+        }
+      }
+      if (setupMode === 'ai') {
+        for (const cbtn of getSetupColorButtons(config.playerCount)) {
+          if (inRect(pt, cbtn)) {
+            audio.playUiClick();
+            config.humanColor = cbtn.color;
+            return;
+          }
+        }
+      }
+      if (inRect(pt, SETUP_BUTTONS.start)) {
+        audio.playUiClick();
+        const aiTotal = setupMode === 'ai' ? config.playerCount - 1 : 0;
+        resetMatch(config.playerCount, aiTotal);
+        return;
+      }
+      if (inRect(pt, SETUP_BUTTONS.back)) {
+        audio.playUiClick();
+        screen = 'MENU';
+        return;
+      }
+      return;
+    }
+
+    // --- LEADERBOARD SCREEN ---
+    if (screen === 'LEADERBOARD') {
+      if (inRect(pt, LEADERBOARD_BACK_BTN)) {
+        audio.playUiClick();
+        screen = 'MENU';
+      }
+      return;
+    }
+
+    // --- VICTORY OVERLAY ---
+    if (winnerColor) {
+      if (inRect(pt, VICTORY_BUTTONS.continueSeries)) {
+        audio.playUiClick();
+        resetMatch(config.playerCount, config.aiCount, true);
+      } else if (inRect(pt, VICTORY_BUTTONS.resetZero)) {
+        audio.playUiClick();
+        resetMatch(config.playerCount, config.aiCount, false);
+      } else if (inRect(pt, VICTORY_BUTTONS.menu)) {
+        audio.playUiClick();
+        winnerColor = null;
+        matchStandings = null;
+        screen = 'MENU';
+        audio.startMusic('music_gameplay');
+      }
+      return;
+    }
+
+    // --- LEAVE MATCH MODAL ---
+    if (showLeaveModal) {
+      if (inRect(pt, LEAVE_MATCH_BUTTONS.saveAndReturn)) {
+        audio.playUiClick();
+        animState = null;
+        diceAnim = null;
+        showLeaveModal = false;
+        persistCurrentMatch(false);
+        screen = 'MENU';
+      } else if (inRect(pt, LEAVE_MATCH_BUTTONS.deleteAndReturn)) {
+        audio.playUiClick();
+        animState = null;
+        diceAnim = null;
+        showLeaveModal = false;
+        savedGames = deleteSavedGame(savedGames, currentMatchId);
+        saveUserData({ savedGames, profile });
+        screen = 'MENU';
+      } else if (inRect(pt, LEAVE_MATCH_BUTTONS.cancel)) {
+        audio.playUiClick();
+        showLeaveModal = false;
+      }
+      return;
+    }
+
+    // --- IN-GAME TOOLBAR ---
+    if (inRect(pt, MENU_BTN_IN_GAME)) {
+      audio.playUiClick();
+      showLeaveModal = true;
+      return;
+    }
+    if (inRect(pt, SAVE_BTN_IN_GAME)) {
+      audio.playUiClick();
+      persistCurrentMatch(true);
+      return;
+    }
+    if (state.players.every((p) => !p.isAi) && inRect(pt, CODE_BTN_IN_GAME)) {
+      audio.playUiClick();
+      openCodeModal('export');
+      return;
+    }
+    if (inRect(pt, AUDIO_BTN_RECT)) {
+      toggleAudioMute();
+      return;
+    }
+
+    if (animState || diceAnim) return;
+    const currentPlayer = getCurrentPlayer(state);
+    if (currentPlayer.isAi) return;
+
+    // 1. Active player's dice box tap
+    if (state.phase === 'WAIT_ROLL') {
+      const box = getDiceBoxForColor(currentPlayer.color, config.boardY, state.board.type);
+      if (inRect(pt, box)) {
+        triggerDiceRoll();
+      }
+      return;
+    }
+
+    // 2. Destination target tap or AVANT / ARRIÈRE buttons
+    if (state.phase === 'WAIT_MOVE' && selectedPawnId != null) {
+      const options = state.legalMoves.filter((m) => m.pawnId === selectedPawnId);
+      const backOpt = options.find((o) => o.direction === 'backward_combo') || options.find((o) => o.direction === 'backward');
+      const fwdOpt = options.find((o) => o.direction === 'forward_combo') || options.find((o) => o.direction === 'forward');
+
+      if (backOpt && fwdOpt) {
+        if (inRect(pt, CHOICE_BTN_BACKWARD)) {
+          audio.playUiClick();
+          startPawnMove(selectedPawnId, backOpt.direction, backOpt.diceSum);
+          return;
+        }
+        if (inRect(pt, CHOICE_BTN_FORWARD)) {
+          audio.playUiClick();
+          startPawnMove(selectedPawnId, fwdOpt.direction, fwdOpt.diceSum);
+          return;
+        }
+      }
+
+      for (const opt of options) {
+        const optIntruder = (opt.direction === 'raid' || opt.direction === 'raid_backward')
+          ? { ownerColor: opt.ownerColor, depth: opt.depth, resumeProgress: opt.resumeProgress }
+          : null;
+        const targetPt = getCellPixelPos(
+          state.board.type,
+          currentPlayer.color,
+          selectedPawnId,
+          opt.toProgress,
+          false,
+          optIntruder,
+          config.boardY
+        );
+        if (Math.hypot(pt.x - targetPt.x, pt.y - targetPt.y) <= Math.max(48, CELL_SIZE * 0.9)) {
+          audio.playUiClick();
+          startPawnMove(selectedPawnId, opt.direction, opt.diceSum);
+          return;
+        }
+      }
+    }
+
+    // 3. Legal pawn tap
+    if (state.phase === 'WAIT_MOVE') {
+      const positions = getPawnScreenPositions(state, animState, config.boardY);
+      const hitRadius = Math.max(48, CELL_SIZE * 0.85);
+
+      let bestPawnId = null;
+      let bestDist = Infinity;
+
+      for (const pawnId of state.legalPawnIds) {
+        const pos = positions.get(`${currentPlayer.color}-${pawnId}`);
+        if (!pos) continue;
+        const dist = Math.hypot(pt.x - pos.x, pt.y - pos.y);
+        if (dist <= hitRadius && dist < bestDist) {
+          bestDist = dist;
+          bestPawnId = pawnId;
+        }
+      }
+
+      if (bestPawnId != null) {
+        const options = state.legalMoves.filter((m) => m.pawnId === bestPawnId);
+        if (options.length === 1) {
+          startPawnMove(bestPawnId, options[0].direction);
+        } else {
+          audio.playUiClick();
+          selectedPawnId = bestPawnId;
+        }
+      } else {
+        selectedPawnId = null;
+      }
+    }
+  }
+
+  function handlePointerMove(e) {
+    if (mode !== 'edit' || !dragBoard) return;
+    const pt = toCanvasCoords(canvas, e.clientX, e.clientY);
+    const nextY = Math.round(
+      Math.max(100, Math.min(320, dragBoard.initialBoardY + (pt.y - dragBoard.startY)))
+    );
+    config.boardY = nextY;
+  }
+
+  function handlePointerUp() {
+    dragBoard = null;
+  }
+
+  function handleKeyDown(e) {
+    if (mode !== 'play' || screen !== 'PLAYING' || winnerColor || showLeaveModal) return;
+    audio.unlock();
+    if (e.code === 'Space' || e.code === 'Enter') {
+      e.preventDefault();
+      if (state.phase === 'WAIT_ROLL') {
+        triggerDiceRoll();
+      } else if (state.phase === 'WAIT_MOVE' && state.legalMoves.length === 1) {
+        startPawnMove(state.legalMoves[0].pawnId, state.legalMoves[0].direction, state.legalMoves[0].diceSum);
+      }
+    }
+  }
+
+  canvas.addEventListener('pointerdown', handlePointerDown);
+  window.addEventListener('pointermove', handlePointerMove);
+  window.addEventListener('pointerup', handlePointerUp);
+  window.addEventListener('keydown', handleKeyDown);
+
+  function frame(ts) {
+    const dt = Math.min(0.11, Math.max(0, (ts - lastTs) / 1000));
+    lastTs = ts;
+    elapsedTime += dt;
+
+    if (screen === 'PLAYING' && !winnerColor && !showLeaveModal && !codeOverlayEl) {
+      if (diceAnim) {
+        diceAnim.elapsed += dt;
+        diceAnim.swapTimer += dt;
+        if (diceAnim.swapTimer >= 0.06) {
+          diceAnim.swapTimer = 0;
+          diceAnim.previewValue = 1 + Math.floor(Math.random() * 6);
+          diceAnim.previewValues = [1 + Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 6)];
+        }
+        if (diceAnim.elapsed >= diceAnim.duration) {
+          diceAnim = null;
+          const res = rollDice(state);
+          if (res.threeSixesBlocked) {
+            toastBanner = { text: '3×6 BLOQUÉ !', elapsed: 0, duration: 1.2 };
+            audio.playThreeSixesBlocked();
+          } else if (res.value === 6 && state.consecutiveSixes === 2) {
+            audio.playDoubleSix();
+          } else {
+            audio.playDiceResult(res.value);
+          }
+
+          if (res.autoPassed && !res.threeSixesBlocked) {
+            audio.playTurnStart();
+          }
+
+          if (state.phase === 'WAIT_MOVE') {
+            const currentPlayer = getCurrentPlayer(state);
+            if (!currentPlayer.isAi) {
+              const hasCaptured = currentPlayer.pawns.some((p) => p.capturedBy != null);
+              const noPawnOnBoard = currentPlayer.pawns.every(
+                (p) => p.inHome || p.progress >= state.board.finishProgress
+              );
+              if (noPawnOnBoard && !hasCaptured && state.legalPawnIds.length > 0) {
+                const hasCaptureOpt = state.legalMoves.some((m) => m.captures);
+                if (hasCaptureOpt) {
+                  selectedPawnId = state.legalPawnIds[0];
+                } else {
+                  startPawnMove(state.legalPawnIds[0], 'forward', 6);
+                }
+              } else if (state.legalPawnIds.length === 1) {
+                const onlyPawnId = state.legalPawnIds[0];
+                const opts = state.legalMoves.filter((m) => m.pawnId === onlyPawnId);
+                const hasCaptureDilemma =
+                  opts.length > 1 &&
+                  opts.some((o) => o.direction === 'backward' || o.direction === 'backward_combo' || o.direction === 'raid' || o.direction === 'raid_backward');
+                if (opts.length === 1 || !hasCaptureDilemma) {
+                  const chosen =
+                    opts.find((o) => o.captures) ||
+                    opts.find((o) => o.direction === 'forward_combo') ||
+                    opts[0];
+                  startPawnMove(onlyPawnId, chosen.direction, chosen.diceSum);
+                } else {
+                  selectedPawnId = onlyPawnId;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (animState) {
+        updatePawnAnim(dt);
+      }
+
+      if (mode === 'play' && !animState && !diceAnim) {
+        const currentPlayer = getCurrentPlayer(state);
+        if (currentPlayer.isAi) {
+          aiTimer += dt;
+          if (state.phase === 'WAIT_ROLL' && aiTimer >= 0.28) {
+            aiTimer = 0;
+            triggerDiceRoll();
+          } else if (state.phase === 'WAIT_MOVE' && aiTimer >= 0.25) {
+            aiTimer = 0;
+            const move = chooseAiMove(state);
+            if (move) {
+              startPawnMove(move.pawnId, move.direction, move.diceSum);
+            }
+          }
+        } else {
+          aiTimer = 0;
+        }
+      }
+
+      if (captureFx) {
+        captureFx.elapsed += dt;
+        if (captureFx.elapsed >= captureFx.duration) {
+          captureFx = null;
+        }
+      }
+
+      if (toastBanner) {
+        toastBanner.elapsed += dt;
+        if (toastBanner.elapsed >= toastBanner.duration) {
+          toastBanner = null;
+        }
+      }
+    }
+
+    const audioMuted = !audio.prefs.musicEnabled && !audio.prefs.sfxEnabled;
+    if (screen === 'MENU') {
+      renderMenuScreen(ctx, {
+        artAssets,
+        audioMuted,
+        savedGamesCount: savedGames.length,
+        profile,
+      });
+    } else if (screen === 'SAVES') {
+      renderSavesScreen(ctx, { artAssets, savedGames });
+    } else if (screen === 'PROFILE') {
+      renderProfileScreen(ctx, { artAssets, profile });
+    } else if (screen === 'SETTINGS') {
+      renderSettingsScreen(ctx, {
+        artAssets,
+        prefs: audio.prefs,
+        animationSpeed: config.animationSpeed,
+      });
+    } else if (screen === 'SETUP') {
+      renderSetupScreen(ctx, {
+        artAssets,
+        setupMode,
+        playerCount: config.playerCount,
+        aiCount: config.aiCount,
+        humanColor: config.humanColor,
+      });
+    } else if (screen === 'LEADERBOARD') {
+      renderLeaderboardScreen(ctx, { artAssets, leaderboard });
+    } else {
+      renderGame(ctx, state, {
+        boardY: config.boardY,
+        animState,
+        diceAnim,
+        selectedPawnId,
+        captureFx,
+        toastBanner,
+        winnerColor,
+        showLeaveModal,
+        matchStandings,
+        audioMuted,
+        artAssets,
+        time: elapsedTime,
+        mode,
+      });
+    }
+
+    rafId = requestAnimationFrame(frame);
+  }
+
+  rafId = requestAnimationFrame(frame);
+
+  cleanupCurrentRun = () => {
+    closeCodeModal();
+    cancelAnimationFrame(rafId);
+    audio.dispose();
+    canvas.removeEventListener('pointerdown', handlePointerDown);
+    window.removeEventListener('pointermove', handlePointerMove);
+    window.removeEventListener('pointerup', handlePointerUp);
+    window.removeEventListener('keydown', handleKeyDown);
+  };
+}
+
+window.run = run;
