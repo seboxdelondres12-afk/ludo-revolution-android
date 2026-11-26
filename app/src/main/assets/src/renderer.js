@@ -681,7 +681,7 @@ function drawTitleHeader(ctx, artAssets) {
   ctx.fillText('REVOLUTION', GAME_WIDTH / 2, 330);
   ctx.font = '600 20px system-ui, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.88)';
-  ctx.fillText('Créé par Sébastien Houeto', GAME_WIDTH / 2, 382);
+  ctx.fillText('Créé par Sébastien HOUETO', GAME_WIDTH / 2, 382);
   ctx.restore();
 
   // Decorative glossy pawns row
