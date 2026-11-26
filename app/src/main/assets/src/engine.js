@@ -416,6 +416,23 @@ export function getLegalMoves(state) {
   };
 
   for (const d of diceList) {
+    const player = getCurrentPlayer(state);
+    if (d === 6) {
+      const lockedIds = state.capturedThisTurnPawnIds || [];
+      for (const pawn of player.pawns) {
+        if (pawn.capturedBy != null && !lockedIds.includes(pawn.id)) {
+          // One 6 returns a captured pawn from the captor's base to its own base.
+          pushUnique({
+            pawnId: pawn.id,
+            direction: 'recover',
+            toProgress: 0,
+            captures: false,
+            diceSum: 6,
+            dieUsed: [6],
+          });
+        }
+      }
+    }
     for (const m of getMovesForSingleValue(state, d, false, [d])) {
       pushUnique(m);
     }
@@ -429,15 +446,7 @@ export function getLegalMoves(state) {
       for (const pawn of player.pawns) {
         if (lockedIds.includes(pawn.id)) continue;
         if (pawn.capturedBy != null) {
-          // A captured pawn returns to its own base only after double six.
-          pushUnique({
-            pawnId: pawn.id,
-            direction: 'recover',
-            toProgress: 0,
-            captures: false,
-            diceSum: 12,
-            dieUsed: [6, 6],
-          });
+          // Captured-pawn recovery is handled by a single 6 above.
           continue;
         }
         if (pawn.intruderLane) {
