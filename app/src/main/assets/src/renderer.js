@@ -1516,3 +1516,184 @@ export function renderGame(ctx, state, ui) {
         ctx.stroke();
         drawDicePips(ctx, 0, 0, subSize, pairVals[di], !dieActive);
         ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    // Gold-bordered Forward vs Backward Capture choice buttons
+    if (!animState && !diceAnim && state.phase === 'WAIT_MOVE' && selectedPawnId != null) {
+      const options = state.legalMoves.filter((m) => m.pawnId === selectedPawnId);
+      const backOpt = options.find((o) => o.direction === 'backward_combo') || options.find((o) => o.direction === 'backward');
+      const fwdOpt = options.find((o) => o.direction === 'forward_combo') || options.find((o) => o.direction === 'forward');
+      if (backOpt && fwdOpt) {
+        ctx.save();
+        ctx.fillStyle = '#D97706';
+        drawRoundedRect(ctx, CHOICE_BTN_BACKWARD.x, CHOICE_BTN_BACKWARD.y, CHOICE_BTN_BACKWARD.w, CHOICE_BTN_BACKWARD.h, 22);
+        ctx.fill();
+        ctx.strokeStyle = makeGoldGradient(ctx, CHOICE_BTN_BACKWARD.x, CHOICE_BTN_BACKWARD.y, CHOICE_BTN_BACKWARD.w, CHOICE_BTN_BACKWARD.h);
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 20px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`← ARRIÈRE (${backOpt.diceSum})`, CHOICE_BTN_BACKWARD.x + CHOICE_BTN_BACKWARD.w / 2, CHOICE_BTN_BACKWARD.y + CHOICE_BTN_BACKWARD.h / 2);
+
+        ctx.fillStyle = '#059669';
+        drawRoundedRect(ctx, CHOICE_BTN_FORWARD.x, CHOICE_BTN_FORWARD.y, CHOICE_BTN_FORWARD.w, CHOICE_BTN_FORWARD.h, 22);
+        ctx.fill();
+        ctx.strokeStyle = makeGoldGradient(ctx, CHOICE_BTN_FORWARD.x, CHOICE_BTN_FORWARD.y, CHOICE_BTN_FORWARD.w, CHOICE_BTN_FORWARD.h);
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText(`AVANT (${fwdOpt.diceSum}) →`, CHOICE_BTN_FORWARD.x + CHOICE_BTN_FORWARD.w / 2, CHOICE_BTN_FORWARD.y + CHOICE_BTN_FORWARD.h / 2);
+        ctx.restore();
+      }
+    }
+
+    // Gold-bordered Toast banner
+    if (toastBanner) {
+      ctx.save();
+      ctx.fillStyle = '#B91C1C';
+      drawRoundedRect(ctx, GAME_WIDTH / 2 - 150, boardY + BOARD_SIZE / 2 - 30, 300, 60, 30);
+      ctx.fill();
+      ctx.strokeStyle = '#FACC15';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 24px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(toastBanner.text, GAME_WIDTH / 2, boardY + BOARD_SIZE / 2);
+      ctx.restore();
+    }
+
+    // Gold-bordered In-Game Toolbar: Menu, Save, Code, Audio
+    drawGoldButton(
+      ctx,
+      MENU_BTN_IN_GAME,
+      'rgba(30, 41, 59, 0.9)',
+      '🏠 MENU',
+      '#FFFFFF',
+      20
+    );
+
+    drawGoldButton(
+      ctx,
+      SAVE_BTN_IN_GAME,
+      '#059669',
+      '💾 SAUVER',
+      '#FFFFFF',
+      20
+    );
+
+    if (state.players.every((p) => !p.isAi)) {
+      drawGoldButton(
+        ctx,
+        CODE_BTN_IN_GAME,
+        '#7C3AED',
+        '🔗 CODE',
+        '#FFFFFF',
+        20
+      );
+    }
+
+    ctx.save();
+    ctx.fillStyle = audioMuted ? 'rgba(30, 41, 59, 0.88)' : '#1E3A8A';
+    drawRoundedRect(ctx, AUDIO_BTN_RECT.x, AUDIO_BTN_RECT.y, AUDIO_BTN_RECT.w, AUDIO_BTN_RECT.h, 24);
+    ctx.fill();
+    ctx.strokeStyle = audioMuted ? '#64748B' : makeGoldGradient(ctx, AUDIO_BTN_RECT.x, AUDIO_BTN_RECT.y, AUDIO_BTN_RECT.w, AUDIO_BTN_RECT.h);
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 22px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(
+      audioMuted ? '🔇 MUET' : '🔊 SON',
+      AUDIO_BTN_RECT.x + AUDIO_BTN_RECT.w / 2,
+      AUDIO_BTN_RECT.y + AUDIO_BTN_RECT.h / 2
+    );
+    ctx.restore();
+
+    // Victory overlay with full standings & Continue (+pts) vs Reset (0)
+    if (winnerColor) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.78)';
+      ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+      ctx.fillStyle = '#1E1B4B';
+      drawRoundedRect(ctx, 56, 250, 608, 740, 30);
+      ctx.fill();
+      ctx.strokeStyle = makeGoldGradient(ctx, 56, 250, 608, 740);
+      ctx.lineWidth = 5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#FACC15';
+      ctx.font = '900 40px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🏆  FIN DE PARTIE !', GAME_WIDTH / 2, 315);
+
+      ctx.fillStyle = COLORS[winnerColor].fill;
+      ctx.font = '900 30px system-ui, sans-serif';
+      ctx.fillText(`${COLORS[winnerColor].label.toUpperCase()} GAGNE`, GAME_WIDTH / 2, 368);
+
+      const standings = matchStandings || [];
+      standings.forEach((row, i) => {
+        const ry = 415 + i * 52;
+        ctx.fillStyle = i === 0 ? 'rgba(250, 204, 21, 0.16)' : 'rgba(15, 23, 42, 0.65)';
+        drawRoundedRect(ctx, 90, ry, 540, 44, 12);
+        ctx.fill();
+
+        ctx.fillStyle = i === 0 ? '#FACC15' : '#CBD5E1';
+        ctx.font = 'bold 20px system-ui, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(`#${row.rank}  ${COLORS[row.color].label.toUpperCase()}`, 112, ry + 22);
+
+        ctx.fillStyle = '#34D399';
+        ctx.textAlign = 'right';
+        ctx.fillText(`${row.score} pts`, 608, ry + 22);
+      });
+      ctx.restore();
+
+      drawGoldButton(ctx, VICTORY_BUTTONS.continueSeries, '#059669', 'CONTINUER (+PTS)', '#FFFFFF', 21);
+      drawGoldButton(ctx, VICTORY_BUTTONS.resetZero, '#DC2626', 'À ZÉRO', '#FFFFFF', 22);
+      drawGoldButton(ctx, VICTORY_BUTTONS.menu, '#2563EB', 'MENU', '#FFFFFF', 24);
+    } else if (ui.showLeaveModal) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.78)';
+      ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+      ctx.fillStyle = '#1E1B4B';
+      drawRoundedRect(ctx, 68, 380, 584, 496, 30);
+      ctx.fill();
+      ctx.strokeStyle = makeGoldGradient(ctx, 68, 380, 584, 496);
+      ctx.lineWidth = 5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#FACC15';
+      ctx.font = '900 34px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('QUITTER LA PARTIE ?', GAME_WIDTH / 2, 444);
+      ctx.restore();
+
+      drawGoldButton(ctx, LEAVE_MATCH_BUTTONS.saveAndReturn, '#059669', '💾  SAUVER & RETOUR', '#FFFFFF', 23);
+      drawGoldButton(ctx, LEAVE_MATCH_BUTTONS.deleteAndReturn, '#DC2626', '🗑️  SUPPRIMER LA PARTIE', '#FFFFFF', 22);
+      drawGoldButton(ctx, LEAVE_MATCH_BUTTONS.cancel, '#2563EB', '▶  CONTINUER', '#FFFFFF', 23);
+    }
+  } else {
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+    drawRoundedRect(ctx, 140, 48, 440, 52, 26);
+    ctx.fill();
+    ctx.strokeStyle = '#FACC15';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.fillStyle = '#F8FAFC';
+    ctx.font = 'bold 20px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('EDIT MODE — DRAG BOARD TO POSITION', GAME_WIDTH / 2, 74);
+  }
+}
