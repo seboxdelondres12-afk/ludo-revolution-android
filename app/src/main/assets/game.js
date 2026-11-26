@@ -1229,3 +1229,6 @@ function run(mode = 'play') {
 }
 
 window.run = run;
+
+// Launch the game automatically when the Android WebView opens the app.
+run('play');
