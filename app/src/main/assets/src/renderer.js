@@ -807,3 +807,712 @@ export function renderSavesScreen(ctx, ui) {
 
       // Delete button for this saved game
       const del = getSaveDeleteRect(idx);
+      drawGoldButton(ctx, del, '#991B1B', '🗑️', '#FFFFFF', 28);
+    });
+  }
+  ctx.restore();
+
+  drawGoldButton(ctx, SAVES_BACK_BTN, 'rgba(30, 41, 59, 0.9)', '← RETOUR', '#CBD5E1', 24);
+}
+
+export function renderProfileScreen(ctx, ui) {
+  const { artAssets, profile } = ui;
+  drawBackdrop(ctx, artAssets);
+
+  ctx.save();
+  ctx.fillStyle = '#FACC15';
+  ctx.font = '900 42px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('👤  PROFIL JOUEUR', GAME_WIDTH / 2, 160);
+
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+  drawRoundedRect(ctx, 84, 240, 552, 680, 28);
+  ctx.fill();
+  ctx.strokeStyle = makeGoldGradient(ctx, 84, 240, 552, 680);
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  const stats = [
+    ['Niveau', `Niv. ${profile.level}`],
+    ['Pièces', `🪙 ${profile.coins}`],
+    ['Victoires', `🏆 ${profile.wins}`],
+    ['Parties jouées', `🎲 ${profile.gamesPlayed}`],
+    ['Captures', `⚔️ ${profile.captures}`],
+  ];
+
+  stats.forEach(([label, val], idx) => {
+    const y = 310 + idx * 112;
+    ctx.fillStyle = 'rgba(30, 41, 59, 0.78)';
+    drawRoundedRect(ctx, 118, y, 484, 86, 18);
+    ctx.fill();
+
+    ctx.fillStyle = '#CBD5E1';
+    ctx.font = 'bold 26px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(label, 148, y + 43);
+
+    ctx.fillStyle = '#FACC15';
+    ctx.textAlign = 'right';
+    ctx.fillText(val, 572, y + 43);
+  });
+  ctx.restore();
+
+  drawGoldButton(ctx, PROFILE_BACK_BTN, 'rgba(30, 41, 59, 0.9)', '← RETOUR', '#CBD5E1', 24);
+}
+
+export function renderSettingsScreen(ctx, ui) {
+  const { artAssets, prefs, animationSpeed } = ui;
+  drawBackdrop(ctx, artAssets);
+
+  ctx.save();
+  ctx.fillStyle = '#FACC15';
+  ctx.font = '900 42px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('⚙️  PARAMÈTRES', GAME_WIDTH / 2, 180);
+  ctx.restore();
+
+  drawGoldButton(
+    ctx,
+    SETTINGS_BUTTONS.music,
+    prefs.musicEnabled ? '#059669' : '#334155',
+    `🎵  MUSIQUE : ${prefs.musicEnabled ? 'ON' : 'OFF'}`,
+    '#FFFFFF',
+    26
+  );
+  drawGoldButton(
+    ctx,
+    SETTINGS_BUTTONS.sfx,
+    prefs.sfxEnabled ? '#2563EB' : '#334155',
+    `🔊  EFFETS SONORES : ${prefs.sfxEnabled ? 'ON' : 'OFF'}`,
+    '#FFFFFF',
+    26
+  );
+  drawGoldButton(
+    ctx,
+    SETTINGS_BUTTONS.haptics,
+    prefs.hapticsEnabled ? '#D97706' : '#334155',
+    `📳  VIBRATIONS : ${prefs.hapticsEnabled ? 'ON' : 'OFF'}`,
+    '#FFFFFF',
+    26
+  );
+  const speedLabel =
+    animationSpeed <= 0.8 ? 'LENTE' :
+    animationSpeed <= 1.2 ? 'NORMALE' :
+    animationSpeed <= 1.7 ? 'RAPIDE' : 'TURBO';
+  drawGoldButton(
+    ctx,
+    SETTINGS_BUTTONS.speed,
+    '#1E3A8A',
+    `⚡  VITESSE PIONS : ${speedLabel} (${animationSpeed.toFixed(1)}×)`,
+    '#FFFFFF',
+    24
+  );
+
+  drawGoldButton(ctx, SETTINGS_BUTTONS.back, 'rgba(30, 41, 59, 0.9)', '← RETOUR', '#CBD5E1', 24);
+}
+
+export function renderSetupScreen(ctx, ui) {
+  const { artAssets, setupMode, playerCount, humanColor } = ui;
+  drawBackdrop(ctx, artAssets);
+
+  ctx.save();
+  ctx.fillStyle = '#FACC15';
+  ctx.font = '900 40px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(setupMode === 'ai' ? 'VS ORDINATEUR' : 'MULTIJOUEUR LOCAL', GAME_WIDTH / 2, 180);
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = 'bold 26px system-ui, sans-serif';
+  ctx.fillText('NOMBRE DE JOUEURS', GAME_WIDTH / 2, 325);
+  ctx.restore();
+
+  for (const btn of SETUP_BUTTONS.players) {
+    const active = playerCount === btn.value;
+    drawGoldButton(
+      ctx,
+      btn,
+      active ? '#2563EB' : 'rgba(15, 23, 42, 0.78)',
+      String(btn.value),
+      active ? '#FACC15' : '#CBD5E1',
+      32
+    );
+  }
+
+  if (setupMode === 'ai') {
+    ctx.save();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 26px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`MA COULEUR (1 VS ${playerCount - 1} IA)`, GAME_WIDTH / 2, 558);
+    ctx.restore();
+
+    const colorBtns = getSetupColorButtons(playerCount);
+    const activeColor = colorBtns.some((b) => b.color === humanColor) ? humanColor : colorBtns[0].color;
+    for (const btn of colorBtns) {
+      const selected = btn.color === activeColor;
+      ctx.save();
+      ctx.fillStyle = selected ? COLORS[btn.color].fill : 'rgba(15, 23, 42, 0.78)';
+      drawRoundedRect(ctx, btn.x, btn.y, btn.w, btn.h, 22);
+      ctx.fill();
+      ctx.strokeStyle = selected
+        ? makeGoldGradient(ctx, btn.x, btn.y, btn.w, btn.h)
+        : COLORS[btn.color].fill;
+      ctx.lineWidth = selected ? 5 : 2.5;
+      ctx.stroke();
+      ctx.restore();
+
+      drawGlossyPawn(ctx, btn.x + btn.w / 2, btn.y + btn.h / 2 + 12, selected ? 1.15 : 0.95, COLORS[btn.color], false);
+    }
+  }
+
+  drawGoldButton(ctx, SETUP_BUTTONS.start, '#059669', '▶  LANCER LA PARTIE', '#FFFFFF', 28);
+  drawGoldButton(ctx, SETUP_BUTTONS.back, 'rgba(30, 41, 59, 0.9)', '← RETOUR', '#CBD5E1', 24);
+}
+
+export function renderLeaderboardScreen(ctx, ui) {
+  const { artAssets, leaderboard } = ui;
+  drawBackdrop(ctx, artAssets);
+
+  ctx.save();
+  ctx.fillStyle = '#FACC15';
+  ctx.font = '900 42px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🏆  CLASSEMENT', GAME_WIDTH / 2, 160);
+
+  // Panel
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+  drawRoundedRect(ctx, 64, 230, 592, 760, 26);
+  ctx.fill();
+  ctx.strokeStyle = makeGoldGradient(ctx, 64, 230, 592, 760);
+  ctx.lineWidth = 3.5;
+  ctx.stroke();
+
+  if (leaderboard.loading) {
+    ctx.fillStyle = '#CBD5E1';
+    ctx.font = 'bold 26px system-ui, sans-serif';
+    ctx.fillText('Chargement...', GAME_WIDTH / 2, 580);
+  } else if (!leaderboard.entries || leaderboard.entries.length === 0) {
+    ctx.fillStyle = '#94A3B8';
+    ctx.font = 'bold 24px system-ui, sans-serif';
+    ctx.fillText('Aucun score enregistré', GAME_WIDTH / 2, 580);
+  } else {
+    leaderboard.entries.slice(0, 8).forEach((entry, i) => {
+      const rowY = 275 + i * 84;
+      ctx.fillStyle = i === 0 ? 'rgba(250, 204, 21, 0.16)' : 'rgba(30, 41, 59, 0.72)';
+      drawRoundedRect(ctx, 90, rowY, 540, 68, 16);
+      ctx.fill();
+
+      ctx.fillStyle = i < 3 ? '#FACC15' : '#94A3B8';
+      ctx.font = 'bold 26px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`#${i + 1}`, 114, rowY + 34);
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText(String(entry.username || 'Joueur').slice(0, 16), 186, rowY + 34);
+
+      ctx.fillStyle = '#34D399';
+      ctx.textAlign = 'right';
+      ctx.fillText(`${entry.score} pts`, 606, rowY + 34);
+    });
+  }
+  ctx.restore();
+
+  drawGoldButton(ctx, LEADERBOARD_BACK_BTN, 'rgba(30, 41, 59, 0.9)', '← RETOUR', '#CBD5E1', 24);
+}
+
+export function renderGame(ctx, state, ui) {
+  const {
+    boardY,
+    animState,
+    diceAnim,
+    selectedPawnId,
+    captureFx,
+    toastBanner,
+    winnerColor,
+    matchStandings,
+    audioMuted,
+    artAssets,
+    time,
+    mode,
+  } = ui;
+  const boardType = state.board?.type || 'square';
+  const rankByColor = new Map();
+  for (const r of getPlayerRanks(state, winnerColor)) {
+    rankByColor.set(r.color, r);
+  }
+
+  // 1. Royal Blue Geometric Background (generated image asset + rich gradient fallback)
+  drawBackdrop(ctx, artAssets);
+
+  if (boardType === 'circular') {
+    renderCircularBoard(ctx, state, boardY, artAssets, rankByColor);
+  } else {
+
+  // 2. Crisp dark-bordered Board Frame (matching reference photo)
+  ctx.save();
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+  ctx.shadowBlur = 22;
+  ctx.shadowOffsetY = 8;
+  ctx.fillStyle = '#0F172A';
+  ctx.fillRect(BOARD_X - 4, boardY - 4, BOARD_SIZE + 8, BOARD_SIZE + 8);
+  ctx.restore();
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(BOARD_X, boardY, BOARD_SIZE, BOARD_SIZE);
+
+  // 3. Outer track cells
+  for (let i = 0; i < OUTER_TRACK.length; i++) {
+    const [col, row] = OUTER_TRACK[i];
+    const x = BOARD_X + col * CELL_SIZE;
+    const y = boardY + row * CELL_SIZE;
+
+    let startColor = null;
+    for (const [color, startIdx] of Object.entries(START_TRACK_INDEX)) {
+      if (i === startIdx) startColor = color;
+    }
+
+    if (startColor) {
+      ctx.fillStyle = COLORS[startColor].fill;
+    } else {
+      ctx.fillStyle = '#FFFFFF';
+    }
+    ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(x, y, CELL_SIZE, CELL_SIZE);
+
+    if (STAR_TRACK_INDICES.includes(i)) {
+      drawStar(ctx, x + CELL_SIZE / 2, y + CELL_SIZE / 2, CELL_SIZE * 0.36, CELL_SIZE * 0.16);
+      ctx.strokeStyle = '#94A3B8';
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+    }
+  }
+
+  // Entry arrows on the 4 middle-arm outer cells (matching reference photo)
+  const entryArrows = [
+    { col: 0, row: 7, color: COLORS.red.fill, arrow: '→' },
+    { col: 7, row: 0, color: COLORS.green.fill, arrow: '↓' },
+    { col: 14, row: 7, color: COLORS.yellow.fill, arrow: '←' },
+    { col: 7, row: 14, color: COLORS.blue.fill, arrow: '↑' },
+  ];
+  for (const ea of entryArrows) {
+    const ax = BOARD_X + (ea.col + 0.5) * CELL_SIZE;
+    const ay = boardY + (ea.row + 0.5) * CELL_SIZE;
+    ctx.fillStyle = ea.color;
+    ctx.font = 'bold 26px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(ea.arrow, ax, ay + 1);
+  }
+
+  // 4. Final lanes
+  for (const [color, cells] of Object.entries(FINAL_LANES)) {
+    for (const [col, row] of cells) {
+      const x = BOARD_X + col * CELL_SIZE;
+      const y = boardY + row * CELL_SIZE;
+      ctx.fillStyle = COLORS[color].fill;
+      ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(x, y, CELL_SIZE, CELL_SIZE);
+    }
+  }
+
+  // 5. Center finishing triangles (6..9, 6..9)
+  const cx = BOARD_X + 7.5 * CELL_SIZE;
+  const cy = boardY + 7.5 * CELL_SIZE;
+  const left = BOARD_X + 6 * CELL_SIZE;
+  const right = BOARD_X + 9 * CELL_SIZE;
+  const top = boardY + 6 * CELL_SIZE;
+  const bottom = boardY + 9 * CELL_SIZE;
+
+  const triangles = [
+    { color: COLORS.red.fill, pts: [[left, top], [cx, cy], [left, bottom]] },
+    { color: COLORS.green.fill, pts: [[left, top], [right, top], [cx, cy]] },
+    { color: COLORS.yellow.fill, pts: [[right, top], [right, bottom], [cx, cy]] },
+    { color: COLORS.blue.fill, pts: [[left, bottom], [right, bottom], [cx, cy]] },
+  ];
+
+  for (const tri of triangles) {
+    ctx.fillStyle = tri.color;
+    ctx.beginPath();
+    ctx.moveTo(tri.pts[0][0], tri.pts[0][1]);
+    ctx.lineTo(tri.pts[1][0], tri.pts[1][1]);
+    ctx.lineTo(tri.pts[2][0], tri.pts[2][1]);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#1E293B';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+  }
+
+  // 6. Corner home yards (clean flat colors, sharp white inner box, PLAYER label & rank)
+  const playerOrderLabels = { blue: 'PLAYER1', red: 'PLAYER2', green: 'PLAYER3', yellow: 'PLAYER4' };
+  for (const [color, yard] of Object.entries(HOME_YARDS)) {
+    const x = BOARD_X + yard.col * CELL_SIZE;
+    const y = boardY + yard.row * CELL_SIZE;
+    const w = yard.w * CELL_SIZE;
+    const h = yard.h * CELL_SIZE;
+
+    ctx.fillStyle = COLORS[color].fill;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#0F172A';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, w, h);
+
+    // Inner white yard box
+    const pad = CELL_SIZE;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(x + pad, y + pad, w - pad * 2, h - pad * 2);
+    ctx.strokeStyle = '#0F172A';
+    ctx.lineWidth = 1.8;
+    ctx.strokeRect(x + pad, y + pad, w - pad * 2, h - pad * 2);
+
+    // 4 home slot circles
+    for (const [sc, sr] of HOME_SLOTS[color]) {
+      const sp = gridToPixel(sc, sr, boardY);
+      ctx.fillStyle = COLORS[color].fill;
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, CELL_SIZE * 0.42, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+    }
+
+    const rInfo = rankByColor.get(color);
+    const isBottomYard = color === 'blue' || color === 'yellow';
+    const labelY = isBottomYard ? y + h - pad / 2 : y + pad / 2;
+    const rankY = isBottomYard ? y + pad / 2 : y + h - pad / 2;
+
+    if (rInfo) {
+      // PLAYER1..4 label in outer margin
+      ctx.save();
+      ctx.font = '900 18px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#0F172A';
+      const pLabel = playerOrderLabels[color] || COLORS[color].label.toUpperCase();
+      ctx.strokeText(pLabel, x + w / 2, labelY + 1);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText(pLabel, x + w / 2, labelY + 1);
+      ctx.restore();
+
+      drawColorRankPill(ctx, x + w / 2, rankY, rInfo.rank, rInfo.finished, false);
+      if (rInfo.finished) {
+        drawColorRankPill(ctx, x + w / 2, y + h / 2, rInfo.rank, true, true);
+      }
+    }
+  }
+  } // end square board
+
+  const currentPlayer = getCurrentPlayer(state);
+  const pulse = 0.5 + 0.5 * Math.sin(time * 8);
+
+  // 6b. Capture opportunity indicator (backward, combo, or raid)
+  if (mode === 'play' && !animState && state.phase === 'WAIT_MOVE') {
+    for (const opt of state.legalMoves) {
+      const isHighlight =
+        opt.direction === 'backward' ||
+        opt.direction === 'backward_combo' ||
+        opt.direction === 'raid' ||
+        opt.direction === 'raid_backward' ||
+        (opt.direction === 'forward_combo' && opt.captures);
+      if (!isHighlight) continue;
+      const optIntruder = (opt.direction === 'raid' || opt.direction === 'raid_backward')
+        ? { ownerColor: opt.ownerColor, depth: opt.depth, resumeProgress: opt.resumeProgress }
+        : null;
+      const pt = getCellPixelPos(boardType, currentPlayer.color, opt.pawnId, opt.toProgress, false, optIntruder, boardY);
+      ctx.save();
+      ctx.strokeStyle = '#FACC15';
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.28)';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, (boardType === 'circular' ? 16 : CELL_SIZE * 0.46) + pulse * 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // 6c. Destination choice rings when a pawn is selected (shows die value / combo sum)
+  if (mode === 'play' && !animState && state.phase === 'WAIT_MOVE' && selectedPawnId != null) {
+    const options = state.legalMoves.filter((m) => m.pawnId === selectedPawnId);
+    for (const opt of options) {
+      const optIntruder = (opt.direction === 'raid' || opt.direction === 'raid_backward')
+        ? { ownerColor: opt.ownerColor, depth: opt.depth, resumeProgress: opt.resumeProgress }
+        : null;
+      const pt = getCellPixelPos(boardType, currentPlayer.color, selectedPawnId, opt.toProgress, false, optIntruder, boardY);
+      const isBack = opt.direction === 'backward' || opt.direction === 'backward_combo' || opt.direction === 'raid_backward';
+      const isCombo = opt.direction === 'forward_combo' || opt.direction === 'backward_combo';
+      ctx.save();
+      ctx.strokeStyle = isBack ? '#FACC15' : (isCombo ? '#38BDF8' : '#34D399');
+      ctx.fillStyle = isBack ? 'rgba(250, 204, 21, 0.30)' : (isCombo ? 'rgba(56, 189, 248, 0.30)' : 'rgba(52, 211, 153, 0.28)');
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, (boardType === 'circular' ? 17 : CELL_SIZE * 0.48) + pulse * 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      if (opt.diceSum != null) {
+        ctx.fillStyle = '#0F172A';
+        drawRoundedRect(ctx, pt.x - 13, pt.y - 24, 26, 18, 6);
+        ctx.fill();
+        ctx.strokeStyle = isBack ? '#FACC15' : '#38BDF8';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 12px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${opt.diceSum}`, pt.x, pt.y - 14);
+      }
+      ctx.restore();
+    }
+  }
+
+  // 7. Pawns
+  const pawnPositions = getPawnScreenPositions(state, animState, boardY);
+
+  for (const player of state.players) {
+    for (const pawn of player.pawns) {
+      const key = `${pawn.color}-${pawn.id}`;
+      const pos = pawnPositions.get(key);
+      if (!pos) continue;
+
+      const isTurnPlayer = mode === 'play' && player.color === currentPlayer.color && pawn.progress < (state.board?.finishProgress || 56);
+      const isLegal =
+        isTurnPlayer &&
+        !animState &&
+        state.phase === 'WAIT_MOVE' &&
+        state.legalPawnIds.includes(pawn.id);
+
+      const isSelected = isLegal && selectedPawnId === pawn.id;
+      const turnBoost = isLegal ? (1.22 + pulse * 0.08) : (isTurnPlayer && !pos.captured ? 1.08 : 1.0);
+      const drawScale = pos.scale * turnBoost;
+      const radius = CELL_SIZE * 0.36 * drawScale;
+
+      if (isLegal) {
+        ctx.strokeStyle = isSelected ? '#FACC15' : '#FFFFFF';
+        ctx.lineWidth = (isSelected ? 5 : 4) + pulse * 3;
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, radius + 6 + pulse * 3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      drawGlossyPawn(ctx, pos.x, pos.y, drawScale, COLORS[pawn.color], pos.captured);
+    }
+  }
+
+  // 7b. Capture burst FX
+  if (captureFx) {
+    const p = captureFx.elapsed / captureFx.duration;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, 1 - p);
+    ctx.strokeStyle = '#FACC15';
+    ctx.lineWidth = 6 * (1 - p) + 2;
+    ctx.beginPath();
+    ctx.arc(captureFx.px, captureFx.py, CELL_SIZE * (0.4 + p * 1.4), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 8. Reference-photo style per-player corner dice pods (Play mode)
+  if (mode === 'play') {
+    for (const player of state.players) {
+      const isTurn = player.color === currentPlayer.color;
+      const palette = COLORS[player.color];
+      const box = getDiceBoxForColor(player.color, boardY, boardType);
+      const dieRect = getDiceRectForColor(player.color, boardY, boardType);
+      const canRoll = isTurn && !player.isAi && !animState && !diceAnim && state.phase === 'WAIT_ROLL';
+
+      ctx.save();
+
+      if (!box.radial) {
+        // Purple-blue wing + recessed dark die socket (matching reference photo)
+        const wingGrad = ctx.createLinearGradient(box.x, box.y, box.x, box.y + box.h);
+        wingGrad.addColorStop(0, '#3B82F6');
+        wingGrad.addColorStop(0.55, '#4F46E5');
+        wingGrad.addColorStop(1, '#581C87');
+        ctx.fillStyle = wingGrad;
+        drawRoundedRect(ctx, box.x, box.y + 8, box.w, box.h - 16, 16);
+        ctx.fill();
+        ctx.strokeStyle = isTurn ? '#38BDF8' : '#1E293B';
+        ctx.lineWidth = isTurn ? 3 : 2;
+        ctx.stroke();
+
+        // Recessed dark die socket
+        const sockPad = 8;
+        const sockX = dieRect.x - sockPad;
+        const sockY = box.y - 2;
+        const sockW = dieRect.w + sockPad * 2;
+        const sockH = box.h + 4;
+        const sockGrad = ctx.createLinearGradient(sockX, sockY, sockX, sockY + sockH);
+        sockGrad.addColorStop(0, '#334155');
+        sockGrad.addColorStop(1, '#0F172A');
+        ctx.fillStyle = sockGrad;
+        drawRoundedRect(ctx, sockX, sockY, sockW, sockH, 20);
+        ctx.fill();
+        ctx.strokeStyle = isTurn ? '#38BDF8' : '#1E293B';
+        ctx.lineWidth = isTurn ? 3.2 : 2;
+        ctx.stroke();
+
+        // Mini 4-color Ludo badge + pawn icon in the wing
+        const badgeW = 92;
+        const badgeH = 58;
+        const badgeX = box.diceSide === 'right' ? box.x + 14 : box.x + box.w - badgeW - 14;
+        const badgeY = box.y + (box.h - badgeH) / 2;
+        const mcx = badgeX + badgeW / 2;
+        const mcy = badgeY + badgeH / 2;
+
+        ctx.save();
+        drawRoundedRect(ctx, badgeX, badgeY, badgeW, badgeH, 10);
+        ctx.clip();
+        // 4 quadrant triangles inside mini badge
+        const qTris = [
+          { c: COLORS.red.fill, pts: [[badgeX, badgeY], [mcx, mcy], [badgeX, badgeY + badgeH]] },
+          { c: COLORS.green.fill, pts: [[badgeX, badgeY], [badgeX + badgeW, badgeY], [mcx, mcy]] },
+          { c: COLORS.yellow.fill, pts: [[badgeX + badgeW, badgeY], [badgeX + badgeW, badgeY + badgeH], [mcx, mcy]] },
+          { c: COLORS.blue.fill, pts: [[badgeX, badgeY + badgeH], [badgeX + badgeW, badgeY + badgeH], [mcx, mcy]] },
+        ];
+        for (const qt of qTris) {
+          ctx.fillStyle = qt.c;
+          ctx.beginPath();
+          ctx.moveTo(qt.pts[0][0], qt.pts[0][1]);
+          ctx.lineTo(qt.pts[1][0], qt.pts[1][1]);
+          ctx.lineTo(qt.pts[2][0], qt.pts[2][1]);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+
+        ctx.strokeStyle = '#0F172A';
+        ctx.lineWidth = 2;
+        drawRoundedRect(ctx, badgeX, badgeY, badgeW, badgeH, 10);
+        ctx.stroke();
+
+        // Mini glossy pawn of this player's color inside the badge
+        drawGlossyPawn(ctx, mcx, mcy + 4, 0.92, palette, false);
+
+        // Floating score & rank pill above top pods / below bottom pods
+        const isTopPod = player.color === 'red' || player.color === 'green';
+        const scoreY = isTopPod ? box.y - 16 : box.y + box.h + 16;
+        const rInfo = rankByColor.get(player.color);
+        const rankTxt = rInfo ? formatRankLabel(rInfo.rank, rInfo.finished) : '';
+        ctx.fillStyle = '#F8FAFC';
+        ctx.font = '900 17px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(
+          `${player.score || 0} 🏅  ${rankTxt}`,
+          badgeX + badgeW / 2,
+          scoreY
+        );
+
+        // Bouncing yellow arrow pointing to active die when ready to roll
+        if (canRoll) {
+          const bounce = Math.sin(time * 8) * 6;
+          const arrowOnRight = box.diceSide === 'right';
+          const ax = arrowOnRight ? sockX + sockW + 18 + bounce : sockX - 18 - bounce;
+          const ay = box.y + box.h / 2;
+          ctx.fillStyle = '#FACC15';
+          ctx.strokeStyle = '#92400E';
+          ctx.lineWidth = 3;
+          ctx.font = '900 34px system-ui, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          const arrowChar = arrowOnRight ? '⬅' : '➡';
+          ctx.strokeText(arrowChar, ax, ay);
+          ctx.fillText(arrowChar, ax, ay);
+        }
+      } else {
+        // Colored outer ring on radial dice box + live rank & score pill
+        const rInfo = rankByColor.get(player.color);
+        const rankTxt = rInfo ? formatRankLabel(rInfo.rank, rInfo.finished) : '';
+        ctx.fillStyle = isTurn ? palette.fill : 'rgba(30, 41, 59, 0.6)';
+        drawRoundedRect(ctx, box.x - 4, box.y - 4, box.w + 8, box.h + 8, 22);
+        ctx.fill();
+        if (isTurn) {
+          ctx.strokeStyle = '#FACC15';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#0F172A';
+        drawRoundedRect(ctx, box.x + 2, box.y + box.h + 2, box.w - 4, 22, 10);
+        ctx.fill();
+        ctx.fillStyle = '#FACC15';
+        ctx.font = 'bold 12px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(
+          `${rankTxt ? rankTxt + ' • ' : ''}🏅 ${player.score || 0}`,
+          box.x + box.w / 2,
+          box.y + box.h + 13
+        );
+      }
+
+      // 3D-shaded Die
+      const dcx = dieRect.x + dieRect.w / 2;
+      const dcy = dieRect.y + dieRect.h / 2;
+      ctx.translate(dcx, dcy);
+      if (isTurn && diceAnim) {
+        ctx.rotate(Math.sin(time * 28) * 0.22);
+        ctx.scale(1.08, 1.08);
+      } else if (canRoll) {
+        const s = 1 + pulse * 0.045;
+        ctx.scale(s, s);
+      }
+
+      // Dual 3D-shaded Dice inside socket
+      const gap = 4;
+      const subSize = Math.floor((dieRect.w - gap) / 2);
+      const pairVals =
+        isTurn && diceAnim
+          ? (diceAnim.previewValues || [diceAnim.previewValue, diceAnim.previewValue])
+          : isTurn && state.phase === 'WAIT_MOVE' && Array.isArray(state.lastRolledPair)
+            ? state.lastRolledPair
+            : [player.lastDiceValue || 6, player.lastDiceValue || 6];
+
+      const rem = isTurn && state.phase === 'WAIT_MOVE' ? [...(state.diceValues || [])] : null;
+      const activeFlags = [true, true];
+      if (rem) {
+        for (let di = 0; di < 2; di++) {
+          const idx = rem.indexOf(pairVals[di]);
+          if (idx !== -1) {
+            rem.splice(idx, 1);
+            activeFlags[di] = true;
+          } else {
+            activeFlags[di] = false;
+          }
+        }
+      }
+
+      for (let di = 0; di < 2; di++) {
+        const offsetX = di === 0 ? -(subSize / 2 + gap / 2) : (subSize / 2 + gap / 2);
+        const dieActive = isTurn && activeFlags[di];
+        ctx.save();
+        ctx.translate(offsetX, 0);
+        const subGrad = ctx.createLinearGradient(-subSize / 2, -subSize / 2, subSize / 2, subSize / 2);
+        if (dieActive) {
+          subGrad.addColorStop(0, '#FFFFFF');
+          subGrad.addColorStop(1, '#E2E8F0');
+        } else {
+          subGrad.addColorStop(0, '#64748B');
+          subGrad.addColorStop(1, '#475569');
+        }
+        ctx.fillStyle = subGrad;
+        drawRoundedRect(ctx, -subSize / 2, -subSize / 2, subSize, subSize, 10);
+        ctx.fill();
+        ctx.strokeStyle = canRoll ? '#FACC15' : (dieActive ? '#CBD5E1' : '#334155');
+        ctx.lineWidth = canRoll ? 2.5 : 1.5;
+        ctx.stroke();
+        drawDicePips(ctx, 0, 0, subSize, pairVals[di], !dieActive);
+        ctx.restore();
