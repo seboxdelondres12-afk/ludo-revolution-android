@@ -1,5 +1,7 @@
 # Ludo Revolution
 
+Créateur : **Sébastien Houeto**.
+
 Projet Android pour emballer le jeu Ludo Revolution existant dans une application installable.
 
 ## Version actuelle
